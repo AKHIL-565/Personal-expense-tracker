@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { format, parseISO, isSameDay, isWithinInterval, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 import { Fuel, Timer, Droplets, IndianRupee, Plus, Download, History, Calculator, Trash2 } from 'lucide-react';
+import API_BASE_URL from '../api';
 
 const FuelCalculator = ({ filter, entryDate }) => {
     const [entries, setEntries] = useState([]);
@@ -19,7 +20,7 @@ const FuelCalculator = ({ filter, entryDate }) => {
     useEffect(() => {
         const fetchEntries = async () => {
             try {
-                const response = await fetch('/api/fuel');
+                const response = await fetch(`${API_BASE_URL}/fuel`);
                 if (response.ok) {
                     const data = await response.json();
 
@@ -28,13 +29,13 @@ const FuelCalculator = ({ filter, entryDate }) => {
 
                     if (data.length === 0 && localData.length > 0) {
                         for (const entry of localData) {
-                            await fetch('/api/fuel', {
+                            await fetch(`${API_BASE_URL}/fuel`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify(entry)
                             });
                         }
-                        const reFetch = await fetch('/api/fuel');
+                        const reFetch = await fetch(`${API_BASE_URL}/fuel`);
                         if (reFetch.ok) setEntries(await reFetch.json());
                     } else {
                         setEntries(data);
@@ -53,7 +54,7 @@ const FuelCalculator = ({ filter, entryDate }) => {
         if (!id) return;
 
         try {
-            const response = await fetch(`/api/fuel/${id}`, {
+            const response = await fetch(`${API_BASE_URL}/fuel/${id}`, {
                 method: 'DELETE'
             });
 
@@ -100,7 +101,7 @@ const FuelCalculator = ({ filter, entryDate }) => {
         };
 
         try {
-            const response = await fetch('/api/fuel', {
+            const response = await fetch(`${API_BASE_URL}/fuel`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newEntry)

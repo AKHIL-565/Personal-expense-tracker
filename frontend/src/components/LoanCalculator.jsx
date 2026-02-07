@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { format, parseISO, isSameDay, isWithinInterval, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isValid, differenceInDays, addMonths } from 'date-fns';
 import { IndianRupee, Plus, Calendar, CreditCard, PieChart, History, Wallet, CheckCircle2, Trash2, Clock, Edit2 } from 'lucide-react';
+import API_BASE_URL from '../api';
 
 const LOANS_STORAGE_KEY = 'expense_tracker_loans';
 const PAYMENTS_STORAGE_KEY = 'expense_tracker_loan_payments';
@@ -40,7 +41,7 @@ const LoanCalculator = ({ filter, entryDate }) => {
         const fetchLoans = async () => {
             setLoading(true);
             try {
-                const response = await fetch('/api/loans');
+                const response = await fetch(`${API_BASE_URL}/loans`);
                 if (response.ok) {
                     const data = await response.json();
 
@@ -49,13 +50,13 @@ const LoanCalculator = ({ filter, entryDate }) => {
 
                     if (data.length === 0 && localData.length > 0) {
                         for (const loan of localData) {
-                            await fetch('/api/loans', {
+                            await fetch(`${API_BASE_URL}/loans`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify(loan)
                             });
                         }
-                        const reFetch = await fetch('/api/loans');
+                        const reFetch = await fetch(`${API_BASE_URL}/loans`);
                         if (reFetch.ok) setLoans(await reFetch.json());
                     } else {
                         setLoans(data);
@@ -81,7 +82,7 @@ const LoanCalculator = ({ filter, entryDate }) => {
             const activeId = activeLoan?._id || activeLoan?.id;
             if (!activeId) return;
             try {
-                const response = await fetch(`/api/loans/${activeId}/payments`);
+                const response = await fetch(`${API_BASE_URL}/loans/${activeId}/payments`);
                 if (response.ok) {
                     const data = await response.json();
                     // Merge or replace payments for this loan
@@ -163,7 +164,7 @@ const LoanCalculator = ({ filter, entryDate }) => {
 
         try {
             if (editingLoanId) {
-                const response = await fetch(`/api/loans/${editingLoanId}`, {
+                const response = await fetch(`${API_BASE_URL}/loans/${editingLoanId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(loanData)
@@ -174,7 +175,7 @@ const LoanCalculator = ({ filter, entryDate }) => {
                     setEditingLoanId(null);
                 }
             } else {
-                const response = await fetch('/api/loans', {
+                const response = await fetch(`${API_BASE_URL}/loans`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ ...loanData, active: true })
@@ -235,7 +236,7 @@ const LoanCalculator = ({ filter, entryDate }) => {
         if (!window.confirm('Are you sure you want to delete this loan? This will also delete all associated payments.')) return;
 
         try {
-            const response = await fetch(`/api/loans/${loanId}`, {
+            const response = await fetch(`${API_BASE_URL}/loans/${loanId}`, {
                 method: 'DELETE'
             });
             if (response.ok) {
@@ -274,7 +275,7 @@ const LoanCalculator = ({ filter, entryDate }) => {
         };
 
         try {
-            const response = await fetch(`/api/loans/${activeId}/payments`, {
+            const response = await fetch(`${API_BASE_URL}/loans/${activeId}/payments`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newPaymentRequest)
@@ -303,7 +304,7 @@ const LoanCalculator = ({ filter, entryDate }) => {
     const handleDeletePayment = async (id) => {
         if (!window.confirm('Are you sure you want to delete this payment?')) return;
         try {
-            const response = await fetch(`/api/loans/payments/${id}`, {
+            const response = await fetch(`${API_BASE_URL}/loans/payments/${id}`, {
                 method: 'DELETE'
             });
             if (response.ok) {

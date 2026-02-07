@@ -8,6 +8,7 @@ import SummaryCards from './components/SummaryCards';
 import DataTable from './components/DataTable';
 import FuelCalculator from './components/FuelCalculator';
 import LoanCalculator from './components/LoanCalculator';
+import API_BASE_URL from './api';
 
 const STORAGE_KEY = 'delivery_money_manager_data';
 
@@ -45,7 +46,7 @@ function App() {
         const fetchTransactions = async () => {
             setLoading(true);
             try {
-                const response = await fetch('/api/transactions');
+                const response = await fetch(`${API_BASE_URL}/transactions`);
                 if (response.ok) {
                     const serverData = await response.json();
 
@@ -68,7 +69,7 @@ function App() {
                             const { _id, ...cleanT } = t;
 
                             try {
-                                await fetch('/api/transactions', {
+                                await fetch(`${API_BASE_URL}/transactions`, {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify(cleanT)
@@ -79,7 +80,7 @@ function App() {
                         }
 
                         // Fetch again after sync to get the new _ids
-                        const reFetch = await fetch('/api/transactions');
+                        const reFetch = await fetch(`${API_BASE_URL}/transactions`);
                         if (reFetch.ok) {
                             setTransactions(await reFetch.json());
                         } else {
@@ -116,7 +117,7 @@ function App() {
         };
 
         try {
-            const response = await fetch('/api/transactions', {
+            const response = await fetch(`${API_BASE_URL}/transactions`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newTransaction)
@@ -138,7 +139,7 @@ function App() {
 
     const handleDeleteTransaction = async (id) => {
         try {
-            const response = await fetch(`/api/transactions/${id}`, {
+            const response = await fetch(`${API_BASE_URL}/transactions/${id}`, {
                 method: 'DELETE'
             });
 
