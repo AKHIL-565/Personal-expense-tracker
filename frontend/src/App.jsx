@@ -41,8 +41,6 @@ function App() {
     }, []);
 
     // Fetch transactions on mount
-    // Fetch transactions on mount
-    // Fetch transactions on mount
     useEffect(() => {
         const fetchTransactions = async () => {
             setLoading(true);

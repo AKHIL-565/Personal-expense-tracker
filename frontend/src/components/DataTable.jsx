@@ -1,5 +1,5 @@
 import React from 'react';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { Trash2 } from 'lucide-react';
 
 const DataTable = ({ transactions, onDelete, isDeleteMode }) => {
@@ -28,7 +28,7 @@ const DataTable = ({ transactions, onDelete, isDeleteMode }) => {
                     <tbody className="divide-y divide-border-color">
                         {transactions.map((t, index) => (
                             <tr key={t._id || t.id} style={{ backgroundColor: index % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
-                                <td data-label="Date" className="p-sm text-sm border-r border-border-color/10 date-cell">{format(new Date(t.date), 'dd/MM/yyyy')}</td>
+                                <td data-label="Date" className="p-sm text-sm border-r border-border-color/10 date-cell">{format(parseISO(t.date), 'dd/MM/yyyy')}</td>
                                 <td data-label="Type" className={`p-sm text-sm font-bold border-r border-border-color/10 ${t.type === 'Income' ? 'text-success' :
                                     t.type === 'Expense' ? 'text-danger' : 'text-primary'
                                     }`}>

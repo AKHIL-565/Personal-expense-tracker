@@ -1,15 +1,17 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-
-app.section = 'middleware';
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Serve static files from the React app
+app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
 // Logging Middleware
 app.use((req, res, next) => {
@@ -186,7 +188,12 @@ app.delete('/api/loans/payments/:id', async (req, res) => {
     }
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
-    console.log(`Health check available at http://localhost:${PORT}/api/health`);
+// Serve the frontend for any other routes (React Router support)
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+});
+
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+    console.log(`Health check available at /api/health`);
 });
