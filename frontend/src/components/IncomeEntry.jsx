@@ -8,7 +8,7 @@ const IncomeEntry = ({ onAdd }) => {
     const handleSubmit = (e) => {
         e.preventDefault();
         if (!amount) return;
-        onAdd({ amount: parseFloat(amount), mode, type: 'Income' });
+        onAdd({ amount: parseFloat(amount), mode: mode.toLowerCase(), type: 'income' });
         setAmount('');
         setMode('Online');
     };

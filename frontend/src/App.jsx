@@ -55,7 +55,19 @@ function App() {
                 });
                 if (response.ok) {
                     const serverData = await response.json();
-                    setTransactions(serverData);
+
+                    // Normalize data: ensure type/mode/category are consistent (lowercase for logic)
+                    // and ensure createdAt is a Date object for sorting
+                    const normalizedData = serverData.map(t => ({
+                        ...t,
+                        type: t.type ? t.type.toLowerCase() : 'other',
+                        mode: t.mode ? t.mode.toLowerCase() : 'other',
+                        category: t.category ? t.category.toLowerCase() : 'other',
+                        amount: Number(t.amount),
+                        createdAt: t.createdAt ? new Date(t.createdAt) : new Date(t.date)
+                    }));
+
+                    setTransactions(normalizedData);
                 } else {
                     console.error('Failed to fetch transactions');
                 }
@@ -87,7 +99,18 @@ function App() {
 
             if (response.ok) {
                 const saved = await response.json();
-                setTransactions(prev => [saved, ...prev]);
+
+                // Normalize new transaction
+                const normalizedSaved = {
+                    ...saved,
+                    type: saved.type ? saved.type.toLowerCase() : 'other',
+                    mode: saved.mode ? saved.mode.toLowerCase() : 'other',
+                    category: saved.category ? saved.category.toLowerCase() : 'other',
+                    amount: Number(saved.amount),
+                    createdAt: saved.createdAt ? new Date(saved.createdAt) : new Date(saved.date)
+                };
+
+                setTransactions(prev => [normalizedSaved, ...prev]);
             } else {
                 throw new Error('Failed to save to server');
             }
@@ -126,22 +149,19 @@ function App() {
             if (sortOrder === 'Highest') return b.amount - a.amount;
             if (sortOrder === 'Lowest') return a.amount - b.amount;
 
-            const dateA = new Date(a.date);
-            const dateB = new Date(b.date);
+            // Sort by Date primarily
+            const dateA = parseISO(a.date);
+            const dateB = parseISO(b.date);
 
-            if (sortOrder === 'Oldest') {
-                if (dateA < dateB) return -1;
-                if (dateA > dateB) return 1;
-                const idA = a._id || a.id;
-                const idB = b._id || b.id;
-                return idA > idB ? 1 : -1;
+            if (dateA.getTime() !== dateB.getTime()) {
+                return sortOrder === 'Oldest' ? dateA - dateB : dateB - dateA;
             }
 
-            if (dateA > dateB) return -1;
-            if (dateA < dateB) return 1;
-            const idA = a._id || a.id;
-            const idB = b._id || b.id;
-            return idB > idA ? 1 : -1;
+            // Secondary sort by createdAt if dates are same
+            const createdA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+            const createdB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+
+            return sortOrder === 'Oldest' ? createdA - createdB : createdB - createdA;
         });
 
         return dateSorted.filter(t => {
@@ -167,7 +187,7 @@ function App() {
             if (!dateMatch) return false;
 
             if (categoryFilter !== 'Total') {
-                return t.category === categoryFilter;
+                return t.category.toLowerCase() === categoryFilter.toLowerCase();
             }
 
             return true;
@@ -180,10 +200,10 @@ function App() {
         let expense = 0;
 
         filteredTransactions.forEach(t => {
-            if (t.type === 'Income') {
-                if (t.mode === 'Online') online += t.amount;
-                if (t.mode === 'COD') cod += t.amount;
-            } else if (t.type === 'Expense') {
+            if (t.type === 'income') {
+                if (t.mode === 'online') online += t.amount;
+                if (t.mode === 'cod') cod += t.amount;
+            } else if (t.type === 'expense') {
                 expense += t.amount;
             }
         });

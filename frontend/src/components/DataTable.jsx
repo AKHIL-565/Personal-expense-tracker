@@ -29,13 +29,13 @@ const DataTable = ({ transactions, onDelete, isDeleteMode }) => {
                         {transactions.map((t, index) => (
                             <tr key={t._id || t.id} style={{ backgroundColor: index % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
                                 <td data-label="Date" className="p-sm text-sm border-r border-border-color/10 date-cell">{format(parseISO(t.date), 'dd/MM/yyyy')}</td>
-                                <td data-label="Type" className={`p-sm text-sm font-bold border-r border-border-color/10 ${t.type === 'Income' ? 'text-success' :
-                                    t.type === 'Expense' ? 'text-danger' : 'text-primary'
+                                <td data-label="Type" className={`p-sm text-sm font-bold border-r border-border-color/10 ${t.type === 'income' ? 'text-success' :
+                                    t.type === 'expense' ? 'text-danger' : 'text-primary'
                                     }`}>
-                                    {t.type}
+                                    {t.type.charAt(0).toUpperCase() + t.type.slice(1)}
                                 </td>
-                                <td data-label="Mode" className="p-sm text-sm border-r border-border-color/10">{t.mode}</td>
-                                <td data-label="Category" className="p-sm text-sm border-r border-border-color/10">{t.category}</td>
+                                <td data-label="Mode" className="p-sm text-sm border-r border-border-color/10">{t.mode.charAt(0).toUpperCase() + t.mode.slice(1)}</td>
+                                <td data-label="Category" className="p-sm text-sm border-r border-border-color/10">{t.category.charAt(0).toUpperCase() + t.category.slice(1)}</td>
                                 <td data-label="Amount" className={`p-sm text-sm text-right font-mono font-bold border-border-color/10 ${isDeleteMode ? 'border-r' : ''}`}>₹{t.amount.toFixed(2)}</td>
                                 {isDeleteMode && (
                                     <td data-label="Action" className="p-sm text-sm text-center">

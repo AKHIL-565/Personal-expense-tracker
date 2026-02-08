@@ -11,8 +11,7 @@ const ExpenseEntry = ({ onAdd }) => {
         if (!amount) return;
 
         const finalCategory = category === 'Other' ? (customCategory || 'Other') : category;
-
-        onAdd({ amount: parseFloat(amount), category: finalCategory, type: 'Expense', mode: '—' });
+        onAdd({ amount: parseFloat(amount), category: finalCategory.toLowerCase(), type: 'expense', mode: '—' });
         setAmount('');
         setCategory('Fuel');
         setCustomCategory('');
