@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO, isSameDay } from 'date-fns';
-import { Download, Trash2 } from 'lucide-react';
+import { Download, Trash2, Maximize2, X, History } from 'lucide-react';
 import FilterBar from './components/FilterBar';
 import IncomeEntry from './components/IncomeEntry';
 import ExpenseEntry from './components/ExpenseEntry';
@@ -8,9 +8,8 @@ import SummaryCards from './components/SummaryCards';
 import DataTable from './components/DataTable';
 import FuelCalculator from './components/FuelCalculator';
 import LoanCalculator from './components/LoanCalculator';
-import API_BASE_URL from './api';
+import API_BASE_URL, { USER_ID } from './api';
 
-const STORAGE_KEY = 'delivery_money_manager_data';
 
 function App() {
     const [transactions, setTransactions] = useState([]);
@@ -20,6 +19,7 @@ function App() {
     const [entryDate, setEntryDate] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [categoryFilter, setCategoryFilter] = useState('Total');
     const [sortOrder, setSortOrder] = useState('Latest');
+    const [isHistoryFullScreen, setIsHistoryFullScreen] = useState(false);
 
     useEffect(() => {
         const updateDate = () => {
@@ -42,61 +42,27 @@ function App() {
 
     // Fetch transactions on mount
     // Fetch transactions on mount
+    // Fetch transactions on mount
     useEffect(() => {
         const fetchTransactions = async () => {
             setLoading(true);
             try {
-                const response = await fetch(`${API_BASE_URL}/transactions`);
+                // Add timestamp to prevent browser caching
+                const response = await fetch(`${API_BASE_URL}/transactions?userId=${USER_ID}&t=${Date.now()}`, {
+                    headers: {
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    }
+                });
                 if (response.ok) {
                     const serverData = await response.json();
-
-                    // GET local data
-                    const saved = localStorage.getItem(STORAGE_KEY);
-                    const localData = saved ? JSON.parse(saved) : [];
-
-                    // Identify items to sync:
-                    // 1. Items without an _id (never synced)
-                    // 2. Items that exist locally but NOT in serverData (based on timestamp id if available, or just heuristic)
-                    // Simpler approach: If local has items without _id, sync them.
-                    // Also, if server is empty but local is not, sync all (handling case where DB was wiped).
-
-                    const toSync = localData.filter(l => !l._id || (serverData.length === 0));
-
-                    if (toSync.length > 0) {
-                        console.log(`Syncing ${toSync.length} items to server...`);
-                        for (const t of toSync) {
-                            // Avoid duplicates if we are in the "Server empty" case but item has _id (sanitize)
-                            const { _id, ...cleanT } = t;
-
-                            try {
-                                await fetch(`${API_BASE_URL}/transactions`, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify(cleanT)
-                                });
-                            } catch (e) {
-                                console.error('Sync failed for item:', t, e);
-                            }
-                        }
-
-                        // Fetch again after sync to get the new _ids
-                        const reFetch = await fetch(`${API_BASE_URL}/transactions`);
-                        if (reFetch.ok) {
-                            setTransactions(await reFetch.json());
-                        } else {
-                            setTransactions(serverData); // Fallback
-                        }
-                    } else {
-                        // If everything looks synced, just use server data
-                        // But if server has LESS data than local (and local has _ids), we might have a drift issue.
-                        // For now, trust server as source of truth if no obvious unsynced items.
-                        setTransactions(serverData);
-                    }
+                    setTransactions(serverData);
+                } else {
+                    console.error('Failed to fetch transactions');
                 }
             } catch (err) {
                 console.error('Failed to fetch transactions:', err);
-                const saved = localStorage.getItem(STORAGE_KEY);
-                if (saved) setTransactions(JSON.parse(saved));
             } finally {
                 setLoading(false);
             }
@@ -104,15 +70,13 @@ function App() {
         fetchTransactions();
     }, []);
 
-    useEffect(() => {
-        if (transactions.length > 0) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
-        }
-    }, [transactions]);
+    // Local storage sync removed as per requirements
+
 
     const handleAddTransaction = async (transaction) => {
         const newTransaction = {
             date: entryDate,
+            userId: USER_ID,
             ...transaction
         };
 
@@ -131,9 +95,7 @@ function App() {
             }
         } catch (err) {
             console.error('API Error:', err);
-            // Fallback
-            const fallback = { ...newTransaction, id: Date.now().toString() };
-            setTransactions(prev => [fallback, ...prev]);
+            alert('Failed to save transaction. Please check your connection.');
         }
     };
 
@@ -341,6 +303,13 @@ function App() {
                                     <option value="Recharge">Recharge</option>
                                 </select>
 
+                                <button
+                                    onClick={() => setIsHistoryFullScreen(true)}
+                                    className="secondary history-export-btn"
+                                    title="Expand History"
+                                >
+                                    <Maximize2 className="export-icon" />
+                                </button>
                                 <button onClick={handleExport} className="secondary history-export-btn">
                                     <Download className="export-icon" />
                                 </button>
@@ -369,6 +338,30 @@ function App() {
                     <LoanCalculator filter={filter} entryDate={entryDate} />
                 )}
             </div>
+
+            {isHistoryFullScreen && (
+                <div className="fullscreen-overlay">
+                    <div className="fullscreen-header">
+                        <div className="fullscreen-title">
+                            <History size={24} />
+                            Full History
+                        </div>
+                        <button
+                            onClick={() => setIsHistoryFullScreen(false)}
+                            className="fullscreen-close-btn"
+                        >
+                            <X size={24} />
+                        </button>
+                    </div>
+                    <div className="fullscreen-content p-md">
+                        <DataTable
+                            transactions={filteredTransactions}
+                            onDelete={handleDeleteTransaction}
+                            isDeleteMode={sortOrder === 'Delete'}
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

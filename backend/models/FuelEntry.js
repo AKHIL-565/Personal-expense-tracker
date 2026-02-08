@@ -6,6 +6,7 @@ const fuelEntrySchema = new mongoose.Schema({
     amount: { type: Number, required: true },
     liters: { type: Number },
     type: { type: String, enum: ['Full', 'Partial'], default: 'Full' },
+    userId: { type: String, required: true, default: 'primary_user' },
     createdAt: { type: Date, default: Date.now }
 });
 

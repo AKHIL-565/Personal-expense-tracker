@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { format, parseISO, isSameDay, isWithinInterval, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
-import { Fuel, Timer, Droplets, IndianRupee, Plus, Download, History, Calculator, Trash2 } from 'lucide-react';
-import API_BASE_URL from '../api';
+import { Fuel, Timer, Droplets, IndianRupee, Plus, Download, History, Calculator, Trash2, Maximize2, X } from 'lucide-react';
+import API_BASE_URL, { USER_ID } from '../api';
 
 const FuelCalculator = ({ filter, entryDate }) => {
     const [entries, setEntries] = useState([]);
@@ -15,36 +15,22 @@ const FuelCalculator = ({ filter, entryDate }) => {
     });
 
     const [isDeleteMode, setIsDeleteMode] = useState(false);
+    const [isFullScreen, setIsFullScreen] = useState(false);
 
     // Fetch entries on mount
     useEffect(() => {
         const fetchEntries = async () => {
             try {
-                const response = await fetch(`${API_BASE_URL}/fuel`);
+                const response = await fetch(`${API_BASE_URL}/fuel?userId=${USER_ID}&t=${Date.now()}`, {
+                    headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache', 'Expires': '0' }
+                });
                 if (response.ok) {
                     const data = await response.json();
-
-                    const saved = localStorage.getItem('fuel_entries');
-                    const localData = saved ? JSON.parse(saved) : [];
-
-                    if (data.length === 0 && localData.length > 0) {
-                        for (const entry of localData) {
-                            await fetch(`${API_BASE_URL}/fuel`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify(entry)
-                            });
-                        }
-                        const reFetch = await fetch(`${API_BASE_URL}/fuel`);
-                        if (reFetch.ok) setEntries(await reFetch.json());
-                    } else {
-                        setEntries(data);
-                    }
+                    setEntries(data);
                 }
             } catch (err) {
                 console.error('Failed to fetch entries:', err);
-                const saved = localStorage.getItem('fuel_entries');
-                if (saved) setEntries(JSON.parse(saved));
+                alert('Failed to load fuel data. Please check connection.');
             }
         };
         fetchEntries();
@@ -61,16 +47,12 @@ const FuelCalculator = ({ filter, entryDate }) => {
             if (response.ok) {
                 const updated = entries.filter(e => (e._id || e.id) !== id);
                 setEntries(updated);
-                localStorage.setItem('fuel_entries', JSON.stringify(updated));
             } else {
                 throw new Error('Failed to delete from server');
             }
         } catch (err) {
             console.error('Delete Error:', err);
-            // Fallback for local deletion
-            const updated = entries.filter(e => (e._id || e.id) !== id);
-            setEntries(updated);
-            localStorage.setItem('fuel_entries', JSON.stringify(updated));
+            alert('Failed to delete entry');
         }
     };
 
@@ -97,7 +79,8 @@ const FuelCalculator = ({ filter, entryDate }) => {
             odometer: parseFloat(formData.odometer),
             amount: parseFloat(formData.amount),
             liters: formData.liters ? parseFloat(formData.liters) : null,
-            type: formData.type
+            type: formData.type,
+            userId: USER_ID
         };
 
         try {
@@ -110,18 +93,12 @@ const FuelCalculator = ({ filter, entryDate }) => {
             if (response.ok) {
                 const savedEntry = await response.json();
                 setEntries(prev => [savedEntry, ...prev]);
-                // Keep localStorage in sync for offline resilience
-                localStorage.setItem('fuel_entries', JSON.stringify([savedEntry, ...entries]));
             } else {
                 throw new Error('Failed to save to server');
             }
         } catch (err) {
             console.error('API Error:', err);
-            // Fallback for demo/development if server is not up
-            const fallbackEntry = { ...newEntry, id: Date.now().toString() };
-            const updated = [fallbackEntry, ...entries];
-            setEntries(updated);
-            localStorage.setItem('fuel_entries', JSON.stringify(updated));
+            alert('Failed to save fuel entry');
         }
 
         setFormData({
@@ -373,6 +350,14 @@ const FuelCalculator = ({ filter, entryDate }) => {
                         <Trash2 size={16} />
                     </button>
                     <button
+                        onClick={() => setIsFullScreen(true)}
+                        className="secondary"
+                        style={{ width: 'auto', padding: '8px 12px', height: '38px', borderRadius: '8px' }}
+                        title="Expand History"
+                    >
+                        <Maximize2 size={16} />
+                    </button>
+                    <button
                         onClick={handleExport}
                         className="secondary"
                         style={{ width: 'auto', padding: '8px 12px', height: '38px', borderRadius: '8px' }}
@@ -404,17 +389,17 @@ const FuelCalculator = ({ filter, entryDate }) => {
                             ) : (
                                 historyWithCalculations.map((entry) => (
                                     <tr key={entry._id || entry.id}>
-                                        <td className="p-sm text-sm">{format(parseISO(entry.date), 'dd MMM')}</td>
-                                        <td className="p-sm text-sm">{entry.odometer.toLocaleString()}</td>
-                                        <td className="p-sm text-sm font-bold">₹{entry.amount.toFixed(0)}</td>
-                                        <td className="p-sm text-sm">{entry.liters ? entry.liters.toFixed(1) : '-'}</td>
-                                        <td className="p-sm text-xs">
+                                        <td data-label="Date" className="p-sm text-sm">{format(parseISO(entry.date), 'dd MMM')}</td>
+                                        <td data-label="KM" className="p-sm text-sm">{entry.odometer.toLocaleString()}</td>
+                                        <td data-label="Cost" className="p-sm text-sm font-bold">₹{entry.amount.toFixed(0)}</td>
+                                        <td data-label="Liters" className="p-sm text-sm">{entry.liters ? entry.liters.toFixed(1) : '-'}</td>
+                                        <td data-label="Type" className="p-sm text-xs">
                                             <span className={`px-sm py-xs rounded-full ${entry.type === 'Full' ? 'bg-success-bg text-success' : 'bg-surface-highlight text-secondary'}`} style={{ borderRadius: '12px', padding: '2px 8px' }}>
                                                 {entry.type}
                                             </span>
                                         </td>
                                         {isDeleteMode && (
-                                            <td className="p-sm text-center">
+                                            <td data-label="Action" className="p-sm text-center">
                                                 <button
                                                     onClick={() => handleDelete(entry._id || entry.id)}
                                                     style={{ background: 'transparent', border: 'none', width: 'auto', padding: '4px' }}
@@ -449,6 +434,72 @@ const FuelCalculator = ({ filter, entryDate }) => {
                                 </span>
                             </div>
                         ))}
+                    </div>
+                </div>
+            )}
+
+            {isFullScreen && (
+                <div className="fullscreen-overlay">
+                    <div className="fullscreen-header">
+                        <div className="fullscreen-title">
+                            <Fuel size={24} />
+                            Full Fuel History
+                        </div>
+                        <button
+                            onClick={() => setIsFullScreen(false)}
+                            className="fullscreen-close-btn"
+                        >
+                            <X size={24} />
+                        </button>
+                    </div>
+                    <div className="fullscreen-content p-md">
+                        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                            <div className="table-responsive">
+                                <table className="transaction-table w-full" style={{ borderCollapse: 'collapse' }}>
+                                    <thead>
+                                        <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--surface-highlight)' }}>
+                                            <th className="p-sm text-xs uppercase tracking-wider text-secondary">Date</th>
+                                            <th className="p-sm text-xs uppercase tracking-wider text-secondary">KM</th>
+                                            <th className="p-sm text-xs uppercase tracking-wider text-secondary">Cost</th>
+                                            <th className="p-sm text-xs uppercase tracking-wider text-secondary">Liters</th>
+                                            <th className="p-sm text-xs uppercase tracking-wider text-secondary">Type</th>
+                                            {isDeleteMode && <th className="p-sm text-xs uppercase tracking-wider text-secondary text-center">Action</th>}
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                        {historyWithCalculations.length === 0 ? (
+                                            <tr>
+                                                <td colSpan="5" className="p-md text-center text-secondary">No fuel entries found</td>
+                                            </tr>
+                                        ) : (
+                                            historyWithCalculations.map((entry) => (
+                                                <tr key={entry._id || entry.id}>
+                                                    <td data-label="Date" className="p-sm text-sm">{format(parseISO(entry.date), 'dd MMM')}</td>
+                                                    <td data-label="KM" className="p-sm text-sm">{entry.odometer.toLocaleString()}</td>
+                                                    <td data-label="Cost" className="p-sm text-sm font-bold">₹{entry.amount.toFixed(0)}</td>
+                                                    <td data-label="Liters" className="p-sm text-sm">{entry.liters ? entry.liters.toFixed(1) : '-'}</td>
+                                                    <td data-label="Type" className="p-sm text-xs">
+                                                        <span className={`px-sm py-xs rounded-full ${entry.type === 'Full' ? 'bg-success-bg text-success' : 'bg-surface-highlight text-secondary'}`} style={{ borderRadius: '12px', padding: '2px 8px' }}>
+                                                            {entry.type}
+                                                        </span>
+                                                    </td>
+                                                    {isDeleteMode && (
+                                                        <td data-label="Action" className="p-sm text-center">
+                                                            <button
+                                                                onClick={() => handleDelete(entry._id || entry.id)}
+                                                                style={{ background: 'transparent', border: 'none', width: 'auto', padding: '4px' }}
+                                                            >
+                                                                <Trash2 size={14} className="text-danger" />
+                                                            </button>
+                                                        </td>
+                                                    )}
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

@@ -6,6 +6,7 @@ const loanSchema = new mongoose.Schema({
     emiPerMonth: { type: Number, required: true },
     startDate: { type: String, required: true },
     active: { type: Boolean, default: true },
+    userId: { type: String, required: true, default: 'primary_user' },
     createdAt: { type: Date, default: Date.now }
 });
 

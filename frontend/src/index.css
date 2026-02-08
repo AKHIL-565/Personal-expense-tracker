@@ -594,3 +594,169 @@ button.deposit-btn {
     height: 14px;
   }
 }
+
+/* Full Screen History Mode */
+.fullscreen-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: var(--bg-color);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+}
+
+.fullscreen-header {
+  padding: var(--spacing-md);
+  background-color: var(--surface-highlight);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.fullscreen-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fullscreen-close-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  padding: 0;
+  cursor: pointer;
+}
+
+.fullscreen-content {
+  flex-grow: 1;
+  overflow: hidden;
+  /* Prevent double scrollbars */
+  padding: 0;
+  background-color: var(--bg-color);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Overrides for table in fullscreen */
+.fullscreen-overlay .card {
+  flex: 1;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  padding: 0;
+  overflow: auto !important;
+  /* Enable scrolling on the card container */
+  border-radius: 0;
+}
+
+.fullscreen-overlay .transaction-table {
+  width: 100%;
+}
+
+.fullscreen-overlay .transaction-table th {
+  position: sticky;
+  top: 0;
+  background-color: var(--surface-highlight);
+  z-index: 10;
+  padding: 16px 14px !important;
+  font-size: 0.95rem !important;
+  font-weight: 800;
+  color: var(--text-primary);
+  border-right: none;
+  box-shadow: 0 1px 0 var(--border-color);
+  /* Separator for sticky header */
+}
+
+.fullscreen-overlay .transaction-table td {
+  padding: 16px 14px !important;
+  font-size: 1.05rem !important;
+  /* Larger text */
+  border-bottom: 1px solid var(--border-color);
+  border-right: none;
+  white-space: nowrap;
+}
+
+.fullscreen-overlay .transaction-table tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+}
+
+/* Make sure amount column is visible */
+.fullscreen-overlay .transaction-table td:nth-last-child(1) {
+  font-weight: 800;
+  font-size: 1.1rem !important;
+}
+
+/* Mobile Responsive Card Layout for Full Screen */
+@media (max-width: 480px) {
+  .fullscreen-overlay .transaction-table thead {
+    display: none;
+  }
+
+  .fullscreen-overlay .transaction-table tbody tr,
+  .fullscreen-overlay .transaction-table tfoot tr {
+    display: block;
+    background-color: var(--surface-highlight) !important;
+    margin: 16px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    padding: 16px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Specific style for tfoot to distinguish it if needed, or keep same */
+  .fullscreen-overlay .transaction-table tfoot tr {
+    border-top: 2px solid var(--primary-color) !important;
+    background-color: var(--surface-color) !important;
+  }
+
+  .fullscreen-overlay .transaction-table td {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    border: none !important;
+    padding: 8px 0 !important;
+    white-space: normal !important;
+    text-align: right !important;
+    font-size: 1rem !important;
+  }
+
+  .fullscreen-overlay .transaction-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-align: left;
+    margin-right: 16px;
+    flex-shrink: 0;
+  }
+
+  /* Add divider between rows except last */
+  .fullscreen-overlay .transaction-table td:not(:last-child) {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  }
+
+  /* Special handling for Delete mode button centering */
+  .fullscreen-overlay .transaction-table td button {
+    margin-left: auto;
+  }
+
+  /* Hide empty cells in card view */
+  .fullscreen-overlay .transaction-table td:empty {
+    display: none !important;
+  }
+}

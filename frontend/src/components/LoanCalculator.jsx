@@ -1,10 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { format, parseISO, isSameDay, isWithinInterval, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isValid, differenceInDays, addMonths } from 'date-fns';
-import { IndianRupee, Plus, Calendar, CreditCard, PieChart, History, Wallet, CheckCircle2, Trash2, Clock, Edit2 } from 'lucide-react';
-import API_BASE_URL from '../api';
+import { IndianRupee, Plus, Calendar, CreditCard, PieChart, History, Wallet, CheckCircle2, Trash2, Clock, Edit2, Maximize2, X } from 'lucide-react';
+import API_BASE_URL, { USER_ID } from '../api';
 
-const LOANS_STORAGE_KEY = 'expense_tracker_loans';
-const PAYMENTS_STORAGE_KEY = 'expense_tracker_loan_payments';
 
 const LoanCalculator = ({ filter, entryDate }) => {
     const [loans, setLoans] = useState([]);
@@ -12,6 +10,7 @@ const LoanCalculator = ({ filter, entryDate }) => {
 
     const [loading, setLoading] = useState(false);
     const [editingLoanId, setEditingLoanId] = useState(null);
+    const [isFullScreen, setIsFullScreen] = useState(false);
     const [loanTypeFilter, setLoanTypeFilter] = useState('All');
     const [loanFormData, setLoanFormData] = useState({
         name: '',
@@ -41,34 +40,16 @@ const LoanCalculator = ({ filter, entryDate }) => {
         const fetchLoans = async () => {
             setLoading(true);
             try {
-                const response = await fetch(`${API_BASE_URL}/loans`);
+                const response = await fetch(`${API_BASE_URL}/loans?userId=${USER_ID}&t=${Date.now()}`, {
+                    headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache', 'Expires': '0' }
+                });
                 if (response.ok) {
                     const data = await response.json();
-
-                    const saved = localStorage.getItem(LOANS_STORAGE_KEY);
-                    const localData = saved ? JSON.parse(saved) : [];
-
-                    if (data.length === 0 && localData.length > 0) {
-                        for (const loan of localData) {
-                            await fetch(`${API_BASE_URL}/loans`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify(loan)
-                            });
-                        }
-                        const reFetch = await fetch(`${API_BASE_URL}/loans`);
-                        if (reFetch.ok) setLoans(await reFetch.json());
-                    } else {
-                        setLoans(data);
-                    }
-                } else {
-                    const savedLoans = localStorage.getItem(LOANS_STORAGE_KEY);
-                    if (savedLoans) setLoans(JSON.parse(savedLoans));
+                    setLoans(data);
                 }
             } catch (err) {
                 console.error('Fetch loans error:', err);
-                const savedLoans = localStorage.getItem(LOANS_STORAGE_KEY);
-                if (savedLoans) setLoans(JSON.parse(savedLoans));
+                alert('Failed to fetch loans');
             } finally {
                 setLoading(false);
             }
@@ -98,13 +79,8 @@ const LoanCalculator = ({ filter, entryDate }) => {
         fetchPayments();
     }, [activeLoan?._id, activeLoan?.id]);
 
-    useEffect(() => {
-        if (loans.length > 0) localStorage.setItem(LOANS_STORAGE_KEY, JSON.stringify(loans));
-    }, [loans]);
+    // Local storage sync removed as per requirements
 
-    useEffect(() => {
-        if (payments.length > 0) localStorage.setItem(PAYMENTS_STORAGE_KEY, JSON.stringify(payments));
-    }, [payments]);
 
 
     // Filter loans by type
@@ -159,7 +135,8 @@ const LoanCalculator = ({ filter, entryDate }) => {
             name: loanFormData.name || 'Personal Loan',
             totalAmount: parseFloat(loanFormData.totalAmount),
             emiPerMonth: parseFloat(loanFormData.emiPerMonth),
-            startDate: loanFormData.startDate
+            startDate: loanFormData.startDate,
+            userId: USER_ID
         };
 
         try {
@@ -247,9 +224,7 @@ const LoanCalculator = ({ filter, entryDate }) => {
             }
         } catch (err) {
             console.error('Delete loan error:', err);
-            // Fallback for UI responsiveness
-            setLoans(prev => prev.filter(l => (l._id || l.id) !== loanId));
-            setPayments(prev => prev.filter(p => p.loanId !== loanId));
+            alert('Failed to delete loan');
         }
     };
 
@@ -272,6 +247,7 @@ const LoanCalculator = ({ filter, entryDate }) => {
         const newPaymentRequest = {
             date: paymentFormData.date,
             amount: amount,
+            userId: USER_ID
         };
 
         try {
@@ -287,15 +263,7 @@ const LoanCalculator = ({ filter, entryDate }) => {
             }
         } catch (err) {
             console.error('Payment submit error:', err);
-            // Fallback
-            const fallback = {
-                ...newPaymentRequest,
-                id: Date.now().toString(),
-                loanId: activeId,
-                createdAt: new Date().toISOString()
-            };
-            setPayments(prev => [fallback, ...prev]);
-            setPaymentFormData(prev => ({ ...prev, amount: '' }));
+            alert('Failed to submit payment');
         }
 
         setLoading(false);
@@ -524,6 +492,14 @@ const LoanCalculator = ({ filter, entryDate }) => {
                             </button>
                         </div>
                     )}
+                    <button
+                        onClick={() => setIsFullScreen(true)}
+                        className="text-primary"
+                        style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '4px', marginRight: '8px' }}
+                        title="Expand Loan Records"
+                    >
+                        <Maximize2 size={18} />
+                    </button>
                     <select
                         value={loanTypeFilter}
                         onChange={(e) => setLoanTypeFilter(e.target.value)}
@@ -578,17 +554,17 @@ const LoanCalculator = ({ filter, entryDate }) => {
                                                 backgroundColor: l.active ? 'rgba(88, 166, 255, 0.1)' : ''
                                             }}
                                         >
-                                            <td className="p-sm text-sm text-secondary">{formatDate(l.startDate)}</td>
-                                            <td className="p-sm text-sm">
+                                            <td data-label="Start Date" className="p-sm text-sm text-secondary">{formatDate(l.startDate)}</td>
+                                            <td data-label="Loan Type" className="p-sm text-sm">
                                                 <div className="flex flex-col">
                                                     <div className="flex items-center gap-xs">
                                                         <span className="font-medium">{l.name || 'Personal Loan'}</span>
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="p-sm text-sm font-bold">₹{(l.totalAmount || 0).toLocaleString()}</td>
-                                            <td className="p-sm text-sm font-bold text-cod">₹{(l.emiPerMonth || 0).toLocaleString()}</td>
-                                            <td className={`p-sm text-sm font-bold ${daysLeft.color}`}>{daysLeft.text}</td>
+                                            <td data-label="Amount" className="p-sm text-sm font-bold">₹{(l.totalAmount || 0).toLocaleString()}</td>
+                                            <td data-label="EMI/Month" className="p-sm text-sm font-bold text-cod">₹{(l.emiPerMonth || 0).toLocaleString()}</td>
+                                            <td data-label="Days Left" className={`p-sm text-sm font-bold ${daysLeft.color}`}>{daysLeft.text}</td>
                                         </tr>
                                     );
                                 })
@@ -609,6 +585,86 @@ const LoanCalculator = ({ filter, entryDate }) => {
                 </div>
             </div>
 
+            {isFullScreen && (
+                <div className="fullscreen-overlay">
+                    <div className="fullscreen-header">
+                        <div className="fullscreen-title">
+                            <Wallet size={24} />
+                            Loan Records
+                        </div>
+                        <button
+                            onClick={() => setIsFullScreen(false)}
+                            className="fullscreen-close-btn"
+                        >
+                            <X size={24} />
+                        </button>
+                    </div>
+                    <div className="fullscreen-content p-md">
+                        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                            <div className="table-responsive">
+                                <table className="transaction-table w-full" style={{ borderCollapse: 'collapse' }}>
+                                    <thead>
+                                        <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--surface-highlight)' }}>
+                                            <th className="p-sm text-xs uppercase tracking-wider text-secondary">Start Date</th>
+                                            <th className="p-sm text-xs uppercase tracking-wider text-secondary">Loan Type</th>
+                                            <th className="p-sm text-xs uppercase tracking-wider text-secondary">Amount</th>
+                                            <th className="p-sm text-xs uppercase tracking-wider text-secondary">EMI/Month</th>
+                                            <th className="p-sm text-xs uppercase tracking-wider text-secondary">Days Left</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                        {filteredLoans.length === 0 ? (
+                                            <tr>
+                                                <td colSpan="5" className="p-md text-center text-secondary">No loans recorded yet</td>
+                                            </tr>
+                                        ) : (
+                                            filteredLoans.map((l) => {
+                                                const daysLeft = getDaysLeft(l.startDate);
+                                                return (
+                                                    <tr
+                                                        key={l._id || l.id}
+                                                        onClick={() => {
+                                                            handleSelectLoan(l);
+                                                            setIsFullScreen(false); // Close on select to show details? Or keep open? User preference. Closing might be better to see details form.
+                                                        }}
+                                                        style={{
+                                                            cursor: 'pointer',
+                                                            backgroundColor: l.active ? 'rgba(88, 166, 255, 0.1)' : ''
+                                                        }}
+                                                    >
+                                                        <td data-label="Start Date" className="p-sm text-sm text-secondary">{formatDate(l.startDate)}</td>
+                                                        <td data-label="Loan Type" className="p-sm text-sm">
+                                                            <div className="flex flex-col">
+                                                                <div className="flex items-center gap-xs">
+                                                                    <span className="font-medium">{l.name || 'Personal Loan'}</span>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td data-label="Amount" className="p-sm text-sm font-bold">₹{(l.totalAmount || 0).toLocaleString()}</td>
+                                                        <td data-label="EMI/Month" className="p-sm text-sm font-bold text-cod">₹{(l.emiPerMonth || 0).toLocaleString()}</td>
+                                                        <td data-label="Days Left" className={`p-sm text-sm font-bold ${daysLeft.color}`}>{daysLeft.text}</td>
+                                                    </tr>
+                                                );
+                                            })
+                                        )}
+                                    </tbody>
+                                    {filteredLoans.length > 0 && (
+                                        <tfoot>
+                                            <tr style={{ borderTop: '2px solid var(--border-color)', backgroundColor: 'var(--surface-highlight)' }}>
+                                                <td data-label="Total" className="p-sm text-sm font-bold text-cod">TOTAL</td>
+                                                <td className="p-sm text-sm"></td>
+                                                <td data-label="Total Amount" className="p-sm text-sm font-bold text-cod">₹{filteredLoans.reduce((sum, l) => sum + (l.totalAmount || 0), 0).toLocaleString()}</td>
+                                                <td data-label="Total EMI" className="p-sm text-sm font-bold text-cod">₹{filteredLoans.reduce((sum, l) => sum + (l.emiPerMonth || 0), 0).toLocaleString()}</td>
+                                                <td className="p-sm text-sm"></td>
+                                            </tr>
+                                        </tfoot>
+                                    )}
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

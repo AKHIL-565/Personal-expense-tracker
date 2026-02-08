@@ -6,6 +6,7 @@ const transactionSchema = new mongoose.Schema({
     amount: { type: Number, required: true },
     mode: { type: String, default: '—' },
     category: { type: String, default: 'Other' },
+    userId: { type: String, required: true, default: 'primary_user' },
     createdAt: { type: Date, default: Date.now }
 });
 
