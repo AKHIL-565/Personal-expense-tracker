@@ -11,7 +11,10 @@ app.use(cors());
 app.use(express.json());
 
 // Serve static files from the React app
-app.use(express.static(path.join(__dirname, '../frontend/dist')));
+// Serve static files from the React app if not in Vercel function mode or if explicitly requested
+if (process.env.NODE_ENV === 'production' && !process.env.VERCEL) {
+    app.use(express.static(path.join(__dirname, '../frontend/dist')));
+}
 
 // Logging Middleware
 app.use((req, res, next) => {
@@ -45,10 +48,6 @@ const LoanPayment = require('./models/LoanPayment');
 // Health Check Routes
 app.get('/', (req, res) => {
     res.json({ message: "Backend is running" });
-});
-
-app.get('/api/health', (req, res) => {
-    res.json({ status: "ok" });
 });
 
 // Routes for Transactions
@@ -199,14 +198,16 @@ app.delete('/api/loans/payments/:id', async (req, res) => {
 });
 
 // Serve the frontend for any other routes (React Router support)
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
-});
+// Only if not in Vercel, as Vercel handles this via rewrites to static files
+if (process.env.NODE_ENV === 'production' && !process.env.VERCEL) {
+    app.get('*', (req, res) => {
+        res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+    });
+}
 
 if (require.main === module) {
     app.listen(PORT, () => {
         console.log(`Server is running on port ${PORT}`);
-        console.log(`Health check available at /api/health`);
     });
 }
 
