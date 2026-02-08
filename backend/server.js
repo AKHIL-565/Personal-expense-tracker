@@ -24,6 +24,7 @@ app.use((req, res, next) => {
 });
 
 // MongoDB Connection
+// MongoDB Connection
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/expense_tracker';
 
 let isConnected = false;
@@ -45,13 +46,16 @@ const Transaction = require('./models/Transaction');
 const Loan = require('./models/Loan');
 const LoanPayment = require('./models/LoanPayment');
 
-// Health Check Routes
-app.get('/', (req, res) => {
-    res.json({ message: "Backend is running" });
+// Create API Router
+const apiRouter = express.Router();
+
+// Health Check
+apiRouter.get('/health', (req, res) => {
+    res.json({ status: "ok" });
 });
 
 // Routes for Transactions
-app.get('/api/transactions', async (req, res) => {
+apiRouter.get('/transactions', async (req, res) => {
     try {
         const userId = req.query.userId || 'primary_user';
         const transactions = await Transaction.find({ userId }).sort({ createdAt: -1 });
@@ -61,7 +65,7 @@ app.get('/api/transactions', async (req, res) => {
     }
 });
 
-app.post('/api/transactions', async (req, res) => {
+apiRouter.post('/transactions', async (req, res) => {
     const transaction = new Transaction(req.body);
     try {
         const newTransaction = await transaction.save();
@@ -71,7 +75,7 @@ app.post('/api/transactions', async (req, res) => {
     }
 });
 
-app.delete('/api/transactions/:id', async (req, res) => {
+apiRouter.delete('/transactions/:id', async (req, res) => {
     try {
         await Transaction.findByIdAndDelete(req.params.id);
         res.json({ message: 'Deleted successfully' });
@@ -81,7 +85,7 @@ app.delete('/api/transactions/:id', async (req, res) => {
 });
 
 // Routes for Fuel Calculator
-app.get('/api/fuel', async (req, res) => {
+apiRouter.get('/fuel', async (req, res) => {
     try {
         const userId = req.query.userId || 'primary_user';
         const entries = await FuelEntry.find({ userId }).sort({ odometer: -1 });
@@ -91,7 +95,7 @@ app.get('/api/fuel', async (req, res) => {
     }
 });
 
-app.post('/api/fuel', async (req, res) => {
+apiRouter.post('/fuel', async (req, res) => {
     const entry = new FuelEntry(req.body);
     try {
         const newEntry = await entry.save();
@@ -101,7 +105,7 @@ app.post('/api/fuel', async (req, res) => {
     }
 });
 
-app.delete('/api/fuel/:id', async (req, res) => {
+apiRouter.delete('/fuel/:id', async (req, res) => {
     try {
         await FuelEntry.findByIdAndDelete(req.params.id);
         res.json({ message: 'Deleted successfully' });
@@ -111,7 +115,7 @@ app.delete('/api/fuel/:id', async (req, res) => {
 });
 
 // Routes for Loan Calculator
-app.get('/api/loans', async (req, res) => {
+apiRouter.get('/loans', async (req, res) => {
     try {
         const userId = req.query.userId || 'primary_user';
         const loans = await Loan.find({ userId }).sort({ startDate: -1, createdAt: -1 });
@@ -121,7 +125,7 @@ app.get('/api/loans', async (req, res) => {
     }
 });
 
-app.get('/api/loans/active', async (req, res) => {
+apiRouter.get('/loans/active', async (req, res) => {
     try {
         const userId = req.query.userId || 'primary_user';
         const loan = await Loan.findOne({ active: true, userId });
@@ -131,7 +135,7 @@ app.get('/api/loans/active', async (req, res) => {
     }
 });
 
-app.post('/api/loans', async (req, res) => {
+apiRouter.post('/loans', async (req, res) => {
     try {
         const userId = req.body.userId || 'primary_user';
         // Deactivate all existing loans for this user
@@ -145,7 +149,7 @@ app.post('/api/loans', async (req, res) => {
     }
 });
 
-app.put('/api/loans/:id', async (req, res) => {
+apiRouter.put('/loans/:id', async (req, res) => {
     try {
         const updatedLoan = await Loan.findByIdAndUpdate(req.params.id, req.body, { new: true });
         res.json(updatedLoan);
@@ -154,7 +158,7 @@ app.put('/api/loans/:id', async (req, res) => {
     }
 });
 
-app.delete('/api/loans/:id', async (req, res) => {
+apiRouter.delete('/loans/:id', async (req, res) => {
     try {
         await Loan.findByIdAndDelete(req.params.id);
         // Also delete associated payments
@@ -165,7 +169,7 @@ app.delete('/api/loans/:id', async (req, res) => {
     }
 });
 
-app.get('/api/loans/:loanId/payments', async (req, res) => {
+apiRouter.get('/loans/:loanId/payments', async (req, res) => {
     try {
         // userId check optional here as loanId is specific, but good practice if needed
         const payments = await LoanPayment.find({ loanId: req.params.loanId }).sort({ date: -1, createdAt: -1 });
@@ -175,7 +179,7 @@ app.get('/api/loans/:loanId/payments', async (req, res) => {
     }
 });
 
-app.post('/api/loans/:loanId/payments', async (req, res) => {
+apiRouter.post('/loans/:loanId/payments', async (req, res) => {
     try {
         const payment = new LoanPayment({
             loanId: req.params.loanId,
@@ -188,7 +192,7 @@ app.post('/api/loans/:loanId/payments', async (req, res) => {
     }
 });
 
-app.delete('/api/loans/payments/:id', async (req, res) => {
+apiRouter.delete('/loans/payments/:id', async (req, res) => {
     try {
         await LoanPayment.findByIdAndDelete(req.params.id);
         res.json({ message: 'Payment deleted successfully' });
@@ -197,13 +201,14 @@ app.delete('/api/loans/payments/:id', async (req, res) => {
     }
 });
 
-// Serve the frontend for any other routes (React Router support)
-// Only if not in Vercel, as Vercel handles this via rewrites to static files
-if (process.env.NODE_ENV === 'production' && !process.env.VERCEL) {
-    app.get('*', (req, res) => {
-        res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
-    });
-}
+// Mount the API Router at both /api and / to handle prefix mismatches
+app.use('/api', apiRouter);
+app.use('/', apiRouter);
+
+// Root Route
+app.get('/', (req, res) => {
+    res.json({ message: "Backend is running" });
+});
 
 if (require.main === module) {
     app.listen(PORT, () => {

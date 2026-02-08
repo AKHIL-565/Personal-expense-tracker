@@ -87,7 +87,9 @@ function App() {
         const newTransaction = {
             date: entryDate,
             userId: USER_ID,
-            ...transaction
+            ...transaction,
+            // Capitalize type for backend compatibility (Income, Expense)
+            type: transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1).toLowerCase()
         };
 
         try {
@@ -112,11 +114,12 @@ function App() {
 
                 setTransactions(prev => [normalizedSaved, ...prev]);
             } else {
-                throw new Error('Failed to save to server');
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || 'Failed to save to server');
             }
         } catch (err) {
             console.error('API Error:', err);
-            alert('Failed to save transaction. Please check your connection.');
+            alert(`Error: ${err.message}. Please check your connection or redeploy the backend.`);
         }
     };
 
