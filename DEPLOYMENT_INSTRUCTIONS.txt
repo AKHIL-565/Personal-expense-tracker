@@ -1,0 +1,12 @@
+IMPORTANT: Deployment Instructions
+
+To make the app work on Vercel, follow these steps:
+
+1. Go to your Vercel Project Settings > Environment Variables.
+2. Add the following variable:
+   - Key: MONGO_URI
+   - Value: mongodb+srv://akhilname_db_user:akhil123@cluster0.qkjduxo.mongodb.net/expense_tracker?retryWrites=true&w=majority&appName=Cluster0
+
+3. Redeploy your project (e.g., push a new commit or click Redeploy in Vercel).
+
+The code has been updated to support Vercel Serverless Functions automatically via the `api/` directory and `vercel.json`. The backend will now run on the same domain as the frontend.

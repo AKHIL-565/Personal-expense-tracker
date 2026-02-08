@@ -22,9 +22,19 @@ app.use((req, res, next) => {
 
 // MongoDB Connection
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/expense_tracker';
-mongoose.connect(MONGO_URI)
-    .then(() => console.log('MongoDB Connected'))
-    .catch(err => console.error('MongoDB Connection Error:', err));
+
+let isConnected = false;
+const connectDB = async () => {
+    if (isConnected) return;
+    try {
+        await mongoose.connect(MONGO_URI);
+        isConnected = true;
+        console.log('MongoDB Connected');
+    } catch (err) {
+        console.error('MongoDB Connection Error:', err);
+    }
+};
+connectDB();
 
 // Models
 const FuelEntry = require('./models/FuelEntry');
@@ -193,7 +203,11 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
 });
 
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-    console.log(`Health check available at /api/health`);
-});
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`Server is running on port ${PORT}`);
+        console.log(`Health check available at /api/health`);
+    });
+}
+
+module.exports = app;
