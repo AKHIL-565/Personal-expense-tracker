@@ -30,6 +30,15 @@ const Transaction = require('./models/Transaction');
 const Loan = require('./models/Loan');
 const LoanPayment = require('./models/LoanPayment');
 
+// Health Check Routes
+app.get('/', (req, res) => {
+    res.json({ message: "Backend is running" });
+});
+
+app.get('/api/health', (req, res) => {
+    res.json({ status: "ok" });
+});
+
 // Routes for Transactions
 app.get('/api/transactions', async (req, res) => {
     try {
